@@ -6,7 +6,7 @@ matplotlib-Chinese==0.0.4
 mediapipe
 mtcnn==1.0.0
 numpy
-opencv-python
+opencv-python-headless
 pandas==2.2.3
 Pillow==10.3.0
 pygame==2.6.1
