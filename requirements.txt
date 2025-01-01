@@ -3,6 +3,7 @@
 deepface==0.0.93
 matplotlib==3.10.0
 matplotlib-Chinese==0.0.4
+mediapipe
 mtcnn==1.0.0
 numpy
 opencv-python-headless
