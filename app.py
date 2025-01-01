@@ -8,7 +8,9 @@ def main():
     # Sidebar Navigation
     page = st.sidebar.selectbox("Select a Page", ["Drowsiness Detection", "About"])
 
-    if page == "About":
+    if page == "Drowsiness Detection":
+        drowsiness_detection_page()
+    elif page == "About":
         about_page()
 
 if __name__ == "__main__":
