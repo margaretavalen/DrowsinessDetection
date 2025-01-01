@@ -6,7 +6,7 @@ pandas
 plotly
 preshed
 pygame
-python
+python==3.12.8
 streamlit
 tensorflow
 virtualenv
