@@ -10,6 +10,7 @@ opencv-python-headless
 pandas==2.2.3
 Pillow==10.3.0
 pygame==2.6.1
+pyOpenGL
 scikit-learn==1.6.0
 streamlit==1.41.1
 tensorflow==2.18.0
