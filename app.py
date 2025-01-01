@@ -1,4 +1,5 @@
 import streamlit as st
+from drowsiness_detection import drowsiness_detection_page
 from about import about_page
 
 # Streamlit UI - Page Navigation
