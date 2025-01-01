@@ -1,0 +1,12 @@
+keras
+numpy
+mediapipe
+opencv-python-headless
+pandas
+plotly
+preshed
+pygame
+python
+streamlit
+tensorflow
+virtualenv
