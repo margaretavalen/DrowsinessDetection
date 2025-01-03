@@ -6,7 +6,6 @@ def about_page():
         """
         <div style="text-align: center; color: #ffff; font-size: 40px; font-weight: bold;"> 
             <h1>About Drowsiness Detection System</h1>
-            <p>Real-time video feed to detect drowsiness using CNN.</p>
         </div>
         """, unsafe_allow_html=True
     )
