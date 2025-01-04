@@ -87,7 +87,7 @@ class FaceMeshDetector:
 class AlarmSystem:
     def __init__(self):
         import os
-        os.environ["SDL_AUDIODRIVER"] = "dummy"  # Use dummy audio driver if needed
+        os.environ["SDL_AUDIODRIVER"] = "dummy" 
         pygame.mixer.init()
         self.is_playing = False
         self.start_time = None
@@ -127,8 +127,8 @@ class DrowsinessDetectionPage:
 
         cap = cv2.VideoCapture(0)
         if not cap.isOpened():
-            st.error("Failed to open webcam.")
-            return
+            st.error("Unable to access the webcam. Try changing the camera index.")
+            cap = cv2.VideoCapture(1)
 
         try:
             while run:
