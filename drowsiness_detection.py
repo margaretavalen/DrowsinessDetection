@@ -6,7 +6,6 @@ import os
 import mediapipe as mp
 import time
 import tensorflow as tf
-from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.models import load_model
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
@@ -87,8 +86,6 @@ class FaceMeshDetector:
 
 class AlarmSystem:
     def __init__(self):
-        import os
-        os.environ["SDL_AUDIODRIVER"] = "directsound"
         pygame.mixer.init()
         self.is_playing = False
         self.start_time = None
@@ -115,22 +112,21 @@ class AlarmSystem:
 class DrowsinessDetectionPage:
     def __init__(self):
         self.model = load_model(Config.MODEL_PATH)
-        self.model.compile(optimizer=Adam(), loss='categorical_crossentropy', metrics=['accuracy'])  # Compile the model
         self.face_detector = FaceMeshDetector()
         self.alarm = AlarmSystem()
         self.closed_frames = 0
 
     def process_webcam(self):
-        FRAME_WINDOW = st.image([])  # Empty image placeholder
+        FRAME_WINDOW = st.image([])
         run = st.checkbox("Start Detection")
 
         if not run:
             return
 
-        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        cap = cv2.VideoCapture(0)
         if not cap.isOpened():
-            st.error("Unable to access the webcam. Try changing the camera index.")
-            cap = cv2.VideoCapture(3)
+            st.error("Failed to open webcam.")
+            return
 
         try:
             while run:
@@ -149,8 +145,6 @@ class DrowsinessDetectionPage:
                     self.closed_frames = 0
 
                 self.alarm.update()
-
-                # Convert the frame to RGB before passing it to Streamlit
                 FRAME_WINDOW.image(cv2.cvtColor(processed_frame, cv2.COLOR_BGR2RGB))
 
         finally:
@@ -172,7 +166,7 @@ class DrowsinessDetectionPage:
 
     def render(self):
         # Streamlit Sidebar Menu
-        menu_options = ['Webcam']
+        menu_options = ['Webcam', 'Upload Image']
         selected_option = st.sidebar.selectbox("Choose Input Type", menu_options)
 
         # Streamlit UI
@@ -185,7 +179,6 @@ class DrowsinessDetectionPage:
             self.process_webcam()
         elif selected_option == 'Upload Image':
             self.process_image()
-
 
 # Export class for modular use
 def drowsiness_detection_page():
