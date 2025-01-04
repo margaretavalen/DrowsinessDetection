@@ -119,7 +119,7 @@ class DrowsinessDetectionPage:
         self.closed_frames = 0
 
     def process_webcam(self):
-        FRAME_WINDOW = st.image([])
+        FRAME_WINDOW = st.image([])  # Empty image placeholder
         run = st.checkbox("Start Detection")
 
         if not run:
@@ -147,6 +147,8 @@ class DrowsinessDetectionPage:
                     self.closed_frames = 0
 
                 self.alarm.update()
+
+                # Convert the frame to RGB before passing it to Streamlit
                 FRAME_WINDOW.image(cv2.cvtColor(processed_frame, cv2.COLOR_BGR2RGB))
 
         finally:
@@ -168,7 +170,7 @@ class DrowsinessDetectionPage:
 
     def render(self):
         # Streamlit Sidebar Menu
-        menu_options = ['Webcam', 'Upload Image']
+        menu_options = ['Webcam']
         selected_option = st.sidebar.selectbox("Choose Input Type", menu_options)
 
         # Streamlit UI
@@ -181,6 +183,7 @@ class DrowsinessDetectionPage:
             self.process_webcam()
         elif selected_option == 'Upload Image':
             self.process_image()
+
 
 # Export class for modular use
 def drowsiness_detection_page():
