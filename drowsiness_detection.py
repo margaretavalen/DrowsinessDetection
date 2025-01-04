@@ -127,7 +127,7 @@ class DrowsinessDetectionPage:
         if not run:
             return
 
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         if not cap.isOpened():
             st.error("Unable to access the webcam. Try changing the camera index.")
             cap = cv2.VideoCapture(3)
