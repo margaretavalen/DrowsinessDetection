@@ -133,7 +133,7 @@ class DrowsinessDetectionPage:
         try:
             while run:
                 ret, frame = cap.read()
-                if not ret or frame is None::
+                if not ret or frame is None:
                     st.error("Failed to capture video.")
                     break
 
