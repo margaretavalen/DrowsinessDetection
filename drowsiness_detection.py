@@ -86,6 +86,8 @@ class FaceMeshDetector:
 
 class AlarmSystem:
     def __init__(self):
+        import os
+        os.environ["SDL_AUDIODRIVER"] = "dummy"  # Use dummy audio driver if needed
         pygame.mixer.init()
         self.is_playing = False
         self.start_time = None
