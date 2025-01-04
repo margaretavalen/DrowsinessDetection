@@ -6,6 +6,7 @@ import os
 import mediapipe as mp
 import time
 import tensorflow as tf
+from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.models import load_model
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
@@ -114,6 +115,7 @@ class AlarmSystem:
 class DrowsinessDetectionPage:
     def __init__(self):
         self.model = load_model(Config.MODEL_PATH)
+        self.model.compile(optimizer=Adam(), loss='categorical_crossentropy', metrics=['accuracy'])  # Compile the model
         self.face_detector = FaceMeshDetector()
         self.alarm = AlarmSystem()
         self.closed_frames = 0
