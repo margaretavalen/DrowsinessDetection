@@ -121,10 +121,7 @@ class DrowsinessDetectionPage:
     def process_webcam(self):
         FRAME_WINDOW = st.image([])
         run = st.checkbox("Start Detection")
-
-        if not run:
-            return
-
+        
         cap = cv2.VideoCapture(cv2.CAP_V4L2)
         if not cap.isOpened():
             st.error("Unable to access the webcam. Try changing the camera index.")
@@ -152,6 +149,10 @@ class DrowsinessDetectionPage:
         finally:
             cap.release()
             FRAME_WINDOW.image([])
+
+        if not run:
+            return
+
 
     def process_image(self):
         uploaded_image = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
