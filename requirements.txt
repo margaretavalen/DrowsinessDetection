@@ -13,5 +13,6 @@ pygame==2.6.1
 pyOpenGL
 scikit-learn==1.6.0
 streamlit==1.41.1
+streamlit_option_menu
 tensorflow==2.18.0
 tqdm==4.67.1
