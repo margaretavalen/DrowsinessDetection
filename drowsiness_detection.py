@@ -85,10 +85,6 @@ class FaceMeshDetector:
         return image, avg_ear
 
 class AlarmSystem:
-    def __init__(self):
-        pygame.mixer.init()
-        self.is_playing = False
-        self.start_time = None
 
     def play(self):
         if not os.path.exists(Config.AUDIO_FILE):
