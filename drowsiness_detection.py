@@ -133,9 +133,7 @@ class DrowsinessDetectionPage:
         try:
             while run:
                 ret, frame = cap.read()
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                cv2.imshow('frame',gray)
-                if not ret:
+                if not ret or frame is None::
                     st.error("Failed to capture video.")
                     break
 
