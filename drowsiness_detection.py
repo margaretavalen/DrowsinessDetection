@@ -9,6 +9,7 @@ import tensorflow as tf
 from tensorflow.keras.models import load_model
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
+from pathlib import Path
 
 @dataclass
 class Config:
