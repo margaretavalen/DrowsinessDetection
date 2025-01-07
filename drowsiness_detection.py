@@ -9,8 +9,6 @@ import tensorflow as tf
 from tensorflow.keras.models import load_model
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
-from playsound import playsound
-import threading
 
 @dataclass
 class Config:
@@ -88,6 +86,7 @@ class FaceMeshDetector:
 
 class AlarmSystem:
     def __init__(self):
+        pygame.mixer.init()
         self.is_playing = False
         self.start_time = None
 
@@ -95,20 +94,17 @@ class AlarmSystem:
         if not os.path.exists(Config.AUDIO_FILE):
             st.error("Sound file not found!")
             return
-
-        def play_sound():
-            try:
-                playsound(Config.AUDIO_FILE)
-            except Exception as e:
-                st.error(f"Error playing sound: {e}")
-
-        if not self.is_playing:
+        try:
+            pygame.mixer.music.load(Config.AUDIO_FILE)
+            pygame.mixer.music.play()
             self.is_playing = True
             self.start_time = time.time()
-            threading.Thread(target=play_sound, daemon=True).start()
-
+        except Exception as e:
+            st.error(f"Error playing sound: {e}")
+            
     def update(self):
         if self.is_playing and time.time() - self.start_time > Config.ALARM_DURATION:
+            pygame.mixer.music.stop()
             self.is_playing = False
             self.start_time = None
 
