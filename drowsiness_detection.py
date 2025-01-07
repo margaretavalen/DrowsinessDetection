@@ -9,7 +9,8 @@ import tensorflow as tf
 from tensorflow.keras.models import load_model
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
-from pathlib import Path
+from playsound import playsound
+import threading
 
 @dataclass
 class Config:
@@ -87,9 +88,6 @@ class FaceMeshDetector:
 
 class AlarmSystem:
     def __init__(self):
-        import os
-        os.environ["SDL_AUDIODRIVER"] = "dummy"  # Use dummy audio driver if needed
-        pygame.mixer.init()
         self.is_playing = False
         self.start_time = None
 
@@ -98,17 +96,19 @@ class AlarmSystem:
             st.error("Sound file not found!")
             return
 
-        try:
-            pygame.mixer.music.load(Config.AUDIO_FILE)
-            pygame.mixer.music.play()
+        def play_sound():
+            try:
+                playsound(Config.AUDIO_FILE)
+            except Exception as e:
+                st.error(f"Error playing sound: {e}")
+
+        if not self.is_playing:
             self.is_playing = True
             self.start_time = time.time()
-        except Exception as e:
-            st.error(f"Error playing sound: {e}")
+            threading.Thread(target=play_sound, daemon=True).start()
 
     def update(self):
         if self.is_playing and time.time() - self.start_time > Config.ALARM_DURATION:
-            pygame.mixer.music.stop()
             self.is_playing = False
             self.start_time = None
 
@@ -128,13 +128,13 @@ class DrowsinessDetectionPage:
 
         cap = cv2.VideoCapture(0)
         if not cap.isOpened():
-            st.error("Unable to access the webcam. Try changing the camera index.")
-            cap = cv2.VideoCapture(-1)
+            st.error("Failed to open webcam.")
+            return
 
         try:
             while run:
                 ret, frame = cap.read()
-                if not ret or frame is None:
+                if not ret:
                     st.error("Failed to capture video.")
                     break
 
