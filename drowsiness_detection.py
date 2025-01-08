@@ -5,7 +5,7 @@ import pygame
 import os
 import mediapipe as mp
 import time
-import tensorflow as tf
+import threading
 from tensorflow.keras.models import load_model
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
@@ -15,9 +15,9 @@ class Config:
     MODEL_PATH: str = "dataset/DatasetFinal/model/fcnn_model.h5"
     EYE_CLOSED_THRESHOLD: float = 0.2
     CLOSED_FRAMES_THRESHOLD: int = 30
-    ALARM_DURATION: int = 4
+    ALARM_DURATION: int = 3
     AUDIO_FILE: str = 'alarm.wav'
-    
+
     LEFT_EYE_INDICES: List[int] = (362, 385, 387, 263, 373, 380)
     RIGHT_EYE_INDICES: List[int] = (33, 160, 158, 133, 153, 144)
 
@@ -61,27 +61,6 @@ class FaceMeshDetector:
         cv2.putText(image, f"Eye Status: {status}", (10, 30), 
                     cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
-        for eye_indices in [Config.LEFT_EYE_INDICES, Config.RIGHT_EYE_INDICES]:
-            eye_coords = np.array([landmarks[idx] for idx in eye_indices], dtype=np.int32)
-            x_min = min(eye_coords[:, 0])
-            y_min = min(eye_coords[:, 1])
-            x_max = max(eye_coords[:, 0])
-            y_max = max(eye_coords[:, 1])
-
-            eyebrow_indices = [17, 18, 19, 20, 21, 22]  
-            eyebrow_coords = np.array([landmarks[idx] for idx in eyebrow_indices], dtype=np.int32)
-            y_min_eyebrow = min(eyebrow_coords[:, 1])
-
-            y_min = min(y_min, y_min_eyebrow)
-
-            width = x_max - x_min
-            height = y_max - y_min
-            aspect_ratio = width / height if height != 0 else 0
-
-            cv2.rectangle(image, (x_min, y_min), (x_max, y_max), color, 2)
-
-            cv2.putText(image, f"Ratio: {aspect_ratio:.2f}", (x_min, y_min - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
         return image, avg_ear
 
 class AlarmSystem:
@@ -94,19 +73,21 @@ class AlarmSystem:
         if not os.path.exists(Config.AUDIO_FILE):
             st.error("Sound file not found!")
             return
-        try:
+
+        if not self.is_playing:
             pygame.mixer.music.load(Config.AUDIO_FILE)
-            pygame.mixer.music.play()
+            pygame.mixer.music.play(-1)  # Loop alarm sound
             self.is_playing = True
             self.start_time = time.time()
-        except Exception as e:
-            st.error(f"Error playing sound: {e}")
-            
-    def update(self):
-        if self.is_playing and time.time() - self.start_time > Config.ALARM_DURATION:
+
+    def stop(self):
+        if self.is_playing:
             pygame.mixer.music.stop()
             self.is_playing = False
-            self.start_time = None
+
+    def update(self):
+        if self.is_playing and time.time() - self.start_time > Config.ALARM_DURATION:
+            self.stop()
 
 class DrowsinessDetectionPage:
     def __init__(self):
@@ -150,34 +131,11 @@ class DrowsinessDetectionPage:
             cap.release()
             FRAME_WINDOW.image([])
 
-    def process_image(self):
-        uploaded_image = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
-        if uploaded_image is None:
-            return
-
-        image = cv2.imdecode(
-            np.frombuffer(uploaded_image.read(), np.uint8),
-            cv2.IMREAD_COLOR
-        )
-        processed_image, _ = self.face_detector.process_frame(image)
-        st.image(processed_image, channels="BGR", caption="Processed Image", 
-                 use_column_width=True)
-
     def render(self):
-        # Streamlit Sidebar Menu
-        menu_options = ['Webcam', 'Upload Image']
-        selected_option = st.sidebar.selectbox("Choose Input Type", menu_options)
-
         # Streamlit UI
-        st.markdown("""<div style="text-align: center; color: #fffff; font-size: 40px; font-weight: bold;">
-            <h1>Drowsiness Detection System</h1>
-            <p>Real-time video feed to detect drowsiness using CNN.</p>
-        </div>""", unsafe_allow_html=True)
-
-        if selected_option == 'Webcam':
-            self.process_webcam()
-        elif selected_option == 'Upload Image':
-            self.process_image()
+        st.title("Drowsiness Detection System")
+        st.write("Real-time video feed to detect drowsiness.")
+        self.process_webcam()
 
 # Export class for modular use
 def drowsiness_detection_page():
