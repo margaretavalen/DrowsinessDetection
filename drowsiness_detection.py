@@ -5,7 +5,7 @@ import pygame
 import os
 import mediapipe as mp
 import time
-import threading
+import tensorflow as tf
 from tensorflow.keras.models import load_model
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
@@ -13,34 +13,24 @@ from typing import Optional, Tuple, List
 @dataclass
 class Config:
     MODEL_PATH: str = "dataset/DatasetFinal/model/fcnn_model.h5"
-    EYE_CLOSED_THRESHOLD: float = 0.2
-    CLOSED_FRAMES_THRESHOLD: int = 30
-    ALARM_DURATION: int = 3
+    EYE_CLOSED_THRESHOLD: float = 0.3
+    CLOSED_FRAMES_THRESHOLD: int = 60 #60 fps setara 2 detik
+    ALARM_DURATION: int = 4
     AUDIO_FILE: str = 'alarm.wav'
-
+    
     LEFT_EYE_INDICES: List[int] = (362, 385, 387, 263, 373, 380)
     RIGHT_EYE_INDICES: List[int] = (33, 160, 158, 133, 153, 144)
 
 class FaceMeshDetector:
     def __init__(self):
-        self.face_mesh = mp.solutions.face_mesh.FaceMesh(
-            static_image_mode=False,
-            max_num_faces=1,
-            refine_landmarks=True
-        )
+        self.face_mesh = mp.solutions.face_mesh.FaceMesh(refine_landmarks=True)
 
-    def calculate_ear(self, eye_landmarks: List[int], landmarks: List[Tuple[int, int]]) -> float:
-        def distance(p1, p2):
-            return np.linalg.norm(np.array(p1) - np.array(p2))
-
-        coords_points = [landmarks[idx] for idx in eye_landmarks]
-        P2_P6 = distance(coords_points[1], coords_points[5])
-        P3_P5 = distance(coords_points[2], coords_points[4])
-        P1_P4 = distance(coords_points[0], coords_points[3])
-
-        # Compute the eye aspect ratio
-        ear = (P2_P6 + P3_P5) / (2.0 * P1_P4)
-        return ear
+    def calculate_ear(self, eye_indices: List[int], landmarks: List[Tuple[int, int]]) -> float:
+        # Calculate EAR using the given eye indices
+        p2_p6 = np.linalg.norm(np.array(landmarks[eye_indices[1]]) - np.array(landmarks[eye_indices[5]]))
+        p3_p5 = np.linalg.norm(np.array(landmarks[eye_indices[2]]) - np.array(landmarks[eye_indices[4]]))
+        p1_p4 = np.linalg.norm(np.array(landmarks[eye_indices[0]]) - np.array(landmarks[eye_indices[3]]))
+        return (p2_p6 + p3_p5) / (2.0 * p1_p4)
 
     def process_frame(self, image: np.ndarray) -> Tuple[np.ndarray, Optional[float]]:
         h, w = image.shape[:2]
@@ -52,14 +42,38 @@ class FaceMeshDetector:
         landmarks = [(int(lm.x * w), int(lm.y * h)) 
                      for lm in results.multi_face_landmarks[0].landmark]
 
+        # Calculate EAR for both eyes
         left_ear = self.calculate_ear(Config.LEFT_EYE_INDICES, landmarks)
         right_ear = self.calculate_ear(Config.RIGHT_EYE_INDICES, landmarks)
         avg_ear = (left_ear + right_ear) / 2.0
 
-        status = "Closed" if avg_ear < Config.EYE_CLOSED_THRESHOLD else "Open"
-        color = (0, 0, 255) if status == "Closed" else (0, 255, 0)
-        cv2.putText(image, f"Eye Status: {status}", (10, 30), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+        # Display EAR status
+        status = "Mengantuk" if avg_ear < Config.EYE_CLOSED_THRESHOLD else "Tidak Mengantuk"
+        color = (0, 0, 255) if status == "Mengantuk" else (0, 255, 0)
+        cv2.putText(image, f"Status: {status}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+
+        # Display EAR for each eye
+        cv2.putText(image, f"EAR (Kiri): {left_ear:.2f}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        cv2.putText(image, f"EAR (Kanan): {right_ear:.2f}", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+        # Draw rectangles and display EAR for each eye region
+        for eye_indices, ear_value, label in zip(
+            [Config.LEFT_EYE_INDICES, Config.RIGHT_EYE_INDICES],
+            [left_ear, right_ear],
+            ["Kiri", "Kanan"]
+        ):
+            eye_coords = np.array([landmarks[idx] for idx in eye_indices], dtype=np.int32)
+            x_min = min(eye_coords[:, 0])
+            y_min = min(eye_coords[:, 1])
+            x_max = max(eye_coords[:, 0])
+            y_max = max(eye_coords[:, 1])
+            
+            # Draw rectangle around the eye
+            cv2.rectangle(image, (x_min, y_min), (x_max, y_max), color, 2)
+            
+            # Display EAR above each eye
+            cv2.putText(image, f"{label}: {ear_value:.2f}", (x_min, y_min - 10), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
         return image, avg_ear
 
@@ -97,21 +111,32 @@ class DrowsinessDetectionPage:
         self.closed_frames = 0
 
     def process_webcam(self):
+        st.markdown(
+            """
+            ### Fitur Webcam
+            - Klik checkbox **Start Detection** untuk memulai deteksi.
+            - Pastikan webcam aktif dan memberikan akses ke aplikasi.
+            - Aplikasi akan mendeteksi status mata dan memberikan peringatan jika mata tertutup lebih dari 2 detik.
+            - Alarm suara akan berbunyi selama 4 detik ketika mata terdeteksi mengantuk lebih dari 2 detik. 
+            - Alarm suara akan berhenti berbunyi ketika mata sudah tidak terdeteksi mengantuk. 
+            - Hapus checkbox **Start Detection** untuk menghentikan deteksi.
+            """
+        )
+
         FRAME_WINDOW = st.image([])
         run = st.checkbox("Start Detection")
-
         if not run:
             return
 
         cap = cv2.VideoCapture(0)
         if not cap.isOpened():
-            st.error("Failed to open webcam.")
-            return
+            st.error("Unable to access the webcam. Try changing the camera index.")
+            cap = cv2.VideoCapture(-1)
 
         try:
             while run:
                 ret, frame = cap.read()
-                if not ret:
+                if not ret or frame is None:
                     st.error("Failed to capture video.")
                     break
 
@@ -131,11 +156,57 @@ class DrowsinessDetectionPage:
             cap.release()
             FRAME_WINDOW.image([])
 
+    def process_image(self):
+        st.markdown(
+            """
+            ### Fitur Upload Gambar
+            - Unggah file gambar dengan format `.jpg`, `.jpeg`, atau `.png`.
+            - Aplikasi akan memproses gambar untuk mendeteksi status mata.
+            - Hasil deteksi akan ditampilkan dengan status "Mengantuk" atau "Tidak Mengantuk".
+            """
+        )
+
+        uploaded_image = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
+        if uploaded_image is None:
+            return
+
+        image = cv2.imdecode(
+            np.frombuffer(uploaded_image.read(), np.uint8),
+            cv2.IMREAD_COLOR
+        )
+        processed_image, _ = self.face_detector.process_frame(image)
+        st.image(processed_image, channels="BGR", caption="Processed Image", 
+                 use_column_width=True)
+
     def render(self):
+        # Streamlit Sidebar Menu
+        menu_options = ['Webcam', 'Upload Image']
+        selected_option = st.sidebar.selectbox("Pilih", menu_options)
+
+        # Sidebar Description
+        st.sidebar.markdown(
+            """
+            ### Petunjuk:
+            - **Webcam**: Gunakan kamera untuk deteksi kantuk secara real-time.
+            - **Upload Image**: Unggah gambar untuk mendeteksi status mata pada gambar.
+            """
+        )
+
         # Streamlit UI
-        st.title("Drowsiness Detection System")
-        st.write("Real-time video feed to detect drowsiness.")
-        self.process_webcam()
+        st.markdown(
+            """
+            <div style="text-align: center; font-size: 18px;">
+                <h1>Drowsiness Detection System</h1>
+                <p>Real-time video feed to detect drowsiness using CNN.</p>
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+
+        if selected_option == 'Webcam':
+            self.process_webcam()
+        elif selected_option == 'Upload Image':
+            self.process_image()
 
 # Export class for modular use
 def drowsiness_detection_page():
